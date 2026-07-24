@@ -14,7 +14,7 @@ The image is built in two stages from the same digest-pinned Bazzite base:
 
 1. The MT7927 stage compiles the pinned `jetm/mediatek-mt7927-dkms` source against the kernel shipped in the selected Bazzite image.
 2. The final stage installs the compiled MT7927 modules, Docker CE packages, VirtualBox Host packages, and the exact matching kernel development package.
-3. `akmods` is forced to build `vboxdrv`, `vboxnetflt`, and `vboxnetadp` during the image build.
+3. `akmodsbuild` runs as the dedicated `akmods` account to build `vboxdrv`, `vboxnetflt`, and `vboxnetadp` during the image build.
 4. The build fails unless all three VirtualBox modules exist and their `vermagic` begins with the exact target kernel version.
 5. CI runs independent image checks before pushing `stable`. A failed module build cannot publish a new stable image.
 
