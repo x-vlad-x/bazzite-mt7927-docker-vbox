@@ -53,18 +53,29 @@ if systemctl list-unit-files vboxdrv.service --no-legend | grep -q '^vboxdrv.ser
 fi
 
 depmod -a "${KERNEL_VERSION}"
-akmods_status=0
-akmods --force --kernels "${KERNEL_VERSION}" --akmod VirtualBox || akmods_status=$?
-mapfile -t failed_logs < <(find /var/cache/akmods -type f -name '*.failed.log')
-if (( akmods_status != 0 || ${#failed_logs[@]} != 0 )); then
-    find /var/cache/akmods -type f -name '*.log' -exec sh -c '
-        for log; do
-            echo "===== ${log} ====="
-            cat "${log}"
-        done
-    ' sh {} +
+akmods_build_dir="$(mktemp -d)"
+chown akmods:akmods "${akmods_build_dir}"
+if ! setpriv --reuid=akmods --regid=akmods --init-groups \
+    /usr/sbin/akmodsbuild \
+    --kernels "${KERNEL_VERSION}" \
+    --outputdir "${akmods_build_dir}" \
+    --logfile "${akmods_build_dir}/build.log" \
+    /usr/src/akmods/VirtualBox-kmod.latest; then
+    cat "${akmods_build_dir}/build.log"
     exit 1
 fi
+
+mapfile -t built_rpms < <(
+    find "${akmods_build_dir}" -maxdepth 1 -type f \
+        -name 'kmod-VirtualBox-*.rpm' \
+        ! -name '*debuginfo*'
+)
+if (( ${#built_rpms[@]} == 0 )); then
+    cat "${akmods_build_dir}/build.log"
+    exit 1
+fi
+
+dnf5 install -y --nogpgcheck --disablerepo='*' "${built_rpms[@]}"
 depmod -a "${KERNEL_VERSION}"
 
 for module in vboxdrv vboxnetflt vboxnetadp; do
@@ -77,6 +88,7 @@ done
 dnf5 clean all
 rm -rf \
     "${akmod_dir}" \
+    "${akmods_build_dir}" \
     /run/akmods \
     /run/dnf \
     /var/cache/akmods \

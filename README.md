@@ -18,7 +18,7 @@ The image is built in two stages from the same digest-pinned Bazzite base:
 4. The build fails unless all three VirtualBox modules exist and their `vermagic` begins with the exact target kernel version.
 5. CI runs independent image checks before pushing `stable`. A failed module build cannot publish a new stable image.
 
-RPM Fusion's current ostree post-install helper calls `akmodsbuild` as root, which `akmods 0.6.2` rejects. The build therefore signature-checks the downloaded `akmod-VirtualBox` RPM, installs that one package without its scripts, resolves and validates all package dependencies, and then runs the supported root `akmods` orchestrator explicitly. The orchestrator drops privileges to the `akmods` build user and installs the resulting kernel-specific kmod RPM.
+RPM Fusion's current ostree post-install helper calls `akmodsbuild` as root, which `akmods 0.6.2` rejects. The build therefore signature-checks the downloaded `akmod-VirtualBox` RPM, installs that one package without its scripts, resolves and validates all package dependencies, runs `akmodsbuild` as the dedicated `akmods` account through `setpriv`, and installs the resulting kernel-specific kmod RPM. Avoiding a PAM session also makes the build work in restricted rootless CI containers.
 
 The image remains the normal KDE desktop with NVIDIA open kernel modules. It does not use a Deck or DX base and does not add a developer-tool bundle.
 
