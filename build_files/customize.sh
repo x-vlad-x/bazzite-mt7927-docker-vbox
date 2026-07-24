@@ -53,7 +53,10 @@ if systemctl list-unit-files vboxdrv.service --no-legend | grep -q '^vboxdrv.ser
 fi
 
 depmod -a "${KERNEL_VERSION}"
-if ! akmods --force --kernels "${KERNEL_VERSION}" --akmod VirtualBox; then
+akmods_status=0
+akmods --force --kernels "${KERNEL_VERSION}" --akmod VirtualBox || akmods_status=$?
+mapfile -t failed_logs < <(find /var/cache/akmods -type f -name '*.failed.log')
+if (( akmods_status != 0 || ${#failed_logs[@]} != 0 )); then
     find /var/cache/akmods -type f -name '*.log' -exec sh -c '
         for log; do
             echo "===== ${log} ====="
