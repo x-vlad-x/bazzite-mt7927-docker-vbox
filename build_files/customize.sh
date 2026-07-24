@@ -53,7 +53,15 @@ if systemctl list-unit-files vboxdrv.service --no-legend | grep -q '^vboxdrv.ser
 fi
 
 depmod -a "${KERNEL_VERSION}"
-akmods --force --kernels "${KERNEL_VERSION}" --akmod VirtualBox
+if ! akmods --force --kernels "${KERNEL_VERSION}" --akmod VirtualBox; then
+    find /var/cache/akmods -type f -name '*.log' -exec sh -c '
+        for log; do
+            echo "===== ${log} ====="
+            cat "${log}"
+        done
+    ' sh {} +
+    exit 1
+fi
 depmod -a "${KERNEL_VERSION}"
 
 for module in vboxdrv vboxnetflt vboxnetadp; do
@@ -70,5 +78,6 @@ rm -rf \
     /run/dnf \
     /var/cache/akmods \
     /var/cache/dnf \
+    /var/lib/dnf/repos \
     /var/lib/dnf/system-repo.lock \
     /var/log/dnf5.log

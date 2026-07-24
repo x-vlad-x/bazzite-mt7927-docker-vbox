@@ -39,8 +39,6 @@ jobs:
 
       - name: Reclaim runner disk space
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
-        with:
-          remove-codeql: true
 
       - name: Install container tools when missing
         shell: bash
@@ -72,21 +70,20 @@ jobs:
           echo "Using ${pinned}"
 
       - name: Build the bootc image
-        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056
-        with:
-          containerfiles: Containerfile
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.DEFAULT_TAG }}
-          build-args: |
-            BASE_IMAGE=${{ steps.base.outputs.pinned }}
-          labels: |
-            containers.bootc=1
-            org.opencontainers.image.description=Bazzite KDE with NVIDIA open modules, MT7927, Docker Engine, and prebuilt VirtualBox host modules
-            org.opencontainers.image.licenses=Apache-2.0
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
-            org.opencontainers.image.vendor=x-vlad-x
+        shell: bash
+        run: |
+          set -euo pipefail
+          podman build \
+            --build-arg "BASE_IMAGE=${{ steps.base.outputs.pinned }}" \
+            --label "containers.bootc=1" \
+            --label "org.opencontainers.image.description=Bazzite KDE with NVIDIA open modules, MT7927, Docker Engine, and prebuilt VirtualBox host modules" \
+            --label "org.opencontainers.image.licenses=Apache-2.0" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.title=${IMAGE_NAME}" \
+            --label "org.opencontainers.image.vendor=x-vlad-x" \
+            --tag "${IMAGE_NAME}:${DEFAULT_TAG}" \
+            .
 
       - name: Verify image contents and kernel modules
         run: build_files/verify-image.sh "${IMAGE_NAME}:${DEFAULT_TAG}"
