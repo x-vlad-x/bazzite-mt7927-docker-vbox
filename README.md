@@ -110,4 +110,4 @@ just build
 just test
 ```
 
-The same validation runs in GitHub Actions on pushes, pull requests, manual dispatches, and the weekly scheduled rebuild.
+The same validation runs in GitHub Actions on pushes, pull requests, manual dispatches, and the daily scheduled rebuild. A failed non-pull-request build creates or refreshes a single issue assigned to the repository owner; the next successful build closes that issue automatically.

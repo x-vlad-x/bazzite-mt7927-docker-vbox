@@ -10,7 +10,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "17 6 * * 1"
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 env:
@@ -135,3 +135,77 @@ jobs:
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
               "${image}"
           fi
+
+  report-build-status:
+    name: Report build status
+    needs:
+      - build
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Create, update, or close the build failure issue
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          REVISION: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const marker = "<!-- stable-image-build-failure -->";
+            const title = "[CI] Stable image build failed";
+            const issues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                ...context.repo,
+                state: "open",
+                per_page: 100,
+              },
+            );
+            const issue = issues.find(
+              (item) =>
+                !item.pull_request &&
+                item.title === title &&
+                item.body?.includes(marker),
+            );
+
+            if (process.env.BUILD_RESULT === "failure") {
+              const shortRevision = process.env.REVISION.slice(0, 12);
+              const body = `${marker}
+            The stable image workflow failed and did not publish a new image.
+
+            - Result: \`${process.env.BUILD_RESULT}\`
+            - Trigger: \`${process.env.EVENT_NAME}\`
+            - Commit: [\`${shortRevision}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${process.env.REVISION})
+            - Run: [Open the workflow logs](${process.env.RUN_URL})
+
+            The existing \`stable\` GHCR tag remains unchanged. Review the failed step before retrying or changing kernel, MT7927, Docker, or VirtualBox dependencies.
+            `;
+
+              if (issue) {
+                await github.rest.issues.update({
+                  ...context.repo,
+                  issue_number: issue.number,
+                  body,
+                  assignees: [context.repo.owner],
+                });
+              } else {
+                await github.rest.issues.create({
+                  ...context.repo,
+                  title,
+                  body,
+                  assignees: [context.repo.owner],
+                });
+              }
+            } else if (process.env.BUILD_RESULT === "success" && issue) {
+              await github.rest.issues.update({
+                ...context.repo,
+                issue_number: issue.number,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }
