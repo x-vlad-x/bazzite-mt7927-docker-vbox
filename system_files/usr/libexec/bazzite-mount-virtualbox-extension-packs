@@ -1,0 +1,14 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+readonly source_dir="/var/lib/virtualbox/ExtensionPacks"
+readonly target_dir="/usr/lib64/virtualbox/ExtensionPacks"
+
+install -d -m 0755 -o root -g root "${source_dir}"
+
+if mountpoint --quiet "${target_dir}"; then
+    exit 0
+fi
+
+mount --bind "${source_dir}" "${target_dir}"
+mount --options remount,bind,nodev,nosuid "${target_dir}"

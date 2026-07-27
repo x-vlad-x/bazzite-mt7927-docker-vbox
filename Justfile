@@ -10,6 +10,7 @@ check:
     bash -n build_files/customize.sh
     bash -n build_files/verify-image.sh
     bash -n system_files/usr/libexec/bazzite-configure-primary-user-groups
+    bash -n system_files/usr/libexec/bazzite-mount-virtualbox-extension-packs
 
 build:
     podman build --pull=newer --build-arg "BASE_IMAGE={{ base_image }}" --tag "{{ image_name }}:{{ default_tag }}" .
