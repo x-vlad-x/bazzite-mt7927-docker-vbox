@@ -43,10 +43,13 @@ rpm -i --noscripts --nodeps "${akmod_rpm}"
 dnf5 install -y VirtualBox VirtualBox-server
 dnf5 check
 
+install -d -m 0755 /usr/lib64/virtualbox/ExtensionPacks
 systemd-sysusers
 systemd-tmpfiles --create /usr/lib/tmpfiles.d/akmods.conf
+systemd-tmpfiles --create /usr/lib/tmpfiles.d/virtualbox-extension-packs.conf
 systemctl enable bazzite-primary-user-groups.service
 systemctl enable docker.socket
+systemctl enable virtualbox-extension-packs.service
 
 if systemctl list-unit-files vboxdrv.service --no-legend | grep -q '^vboxdrv.service'; then
     systemctl enable vboxdrv.service

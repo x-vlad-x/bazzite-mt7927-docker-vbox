@@ -30,6 +30,7 @@ getent group vboxusers
 systemctl is-enabled docker.socket
 systemctl is-enabled bazzite-primary-user-groups.service
 systemctl is-enabled vboxdrv.service
+systemctl is-enabled virtualbox-extension-packs.service
 
 unit_verify_output="$(systemd-analyze verify multi-user.target 2>&1)"
 if grep -qi "ordering cycle" <<<"${unit_verify_output}"; then
@@ -40,6 +41,15 @@ fi
 test -f /usr/lib/sysusers.d/bazzite-mt7927-docker-vbox.conf
 test -x /usr/libexec/bazzite-configure-primary-user-groups
 test -f /usr/lib/modules-load.d/virtualbox-host.conf
+test -d /usr/lib64/virtualbox/ExtensionPacks
+test -x /usr/libexec/bazzite-mount-virtualbox-extension-packs
+test -f /usr/lib/systemd/system/virtualbox-extension-packs.service
+test -f /usr/lib/tmpfiles.d/virtualbox-extension-packs.conf
+
+if find /usr/lib64/virtualbox/ExtensionPacks -mindepth 1 -print -quit | grep -q .; then
+    echo "VirtualBox Extension Packs must not be embedded" >&2
+    exit 1
+fi
 
 for module in vboxdrv vboxnetflt vboxnetadp; do
     path="$(modinfo -k "${KERNEL_VERSION}" -F filename "${module}")"

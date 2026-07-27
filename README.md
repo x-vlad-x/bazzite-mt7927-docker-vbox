@@ -22,7 +22,32 @@ RPM Fusion's current ostree post-install helper calls `akmodsbuild` as root, whi
 
 The image remains the normal KDE desktop with NVIDIA open kernel modules. It does not use a Deck or DX base and does not add a developer-tool bundle.
 
-Oracle Extension Pack is not included. Install it manually only after reviewing and accepting Oracle's license. Guest Additions belong inside each guest operating system; Bazzite's existing `virtualbox-guest-additions` package is separate from the VirtualBox Host packages installed here.
+Oracle Extension Pack is not included. The image bind-mounts persistent writable storage from `/var/lib/virtualbox/ExtensionPacks` at VirtualBox's standard `/usr/lib64/virtualbox/ExtensionPacks` path. This lets VirtualBox Manager install an Extension Pack locally without modifying the immutable deployment or publishing Oracle software in the image. Install it only after reviewing and accepting Oracle's license. Guest Additions belong inside each guest operating system; Bazzite's existing `virtualbox-guest-additions` package is separate from the VirtualBox Host packages installed here.
+
+## Oracle Extension Pack
+
+The Extension Pack version and revision must exactly match the installed VirtualBox Host version:
+
+```bash
+VBoxManage --version
+```
+
+Download the matching `.vbox-extpack` file directly from [Oracle VirtualBox](https://www.virtualbox.org/wiki/Downloads), verify the published checksum, and review the bundled PUEL license. Do not use an Extension Pack downloaded from an unofficial mirror.
+
+Confirm that persistent storage is mounted:
+
+```bash
+systemctl status virtualbox-extension-packs.service
+findmnt /usr/lib64/virtualbox/ExtensionPacks
+```
+
+In VirtualBox Manager, open **Tools → Extensions**, select **Install**, choose the downloaded `.vbox-extpack` file, review the displayed license, and authorize the privileged installation when prompted. Verify the result:
+
+```bash
+VBoxManage list extpacks
+```
+
+The installed files remain under `/var` across image updates and rollbacks. After VirtualBox Host is updated, install the exactly matching Extension Pack before using its features. An old pack may be reported as unusable until it is replaced. Commercial or organizational use may require a separate Oracle license.
 
 ## Secure Boot
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=Mount persistent VirtualBox Extension Packs storage
+After=local-fs.target systemd-tmpfiles-setup.service
+Before=display-manager.service
+ConditionPathIsDirectory=/usr/lib64/virtualbox/ExtensionPacks
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/bazzite-mount-virtualbox-extension-packs
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
