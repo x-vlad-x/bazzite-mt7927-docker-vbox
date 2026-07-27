@@ -1,7 +1,7 @@
 [Unit]
 Description=Add the primary user to Docker and VirtualBox groups
 After=systemd-sysusers.service systemd-user-sessions.service
-Before=docker.socket docker.service vboxdrv.service
+Before=vboxdrv.service
 
 [Service]
 Type=oneshot
