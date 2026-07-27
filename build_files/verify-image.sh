@@ -31,6 +31,12 @@ systemctl is-enabled docker.socket
 systemctl is-enabled bazzite-primary-user-groups.service
 systemctl is-enabled vboxdrv.service
 
+unit_verify_output="$(systemd-analyze verify multi-user.target 2>&1)"
+if grep -qi "ordering cycle" <<<"${unit_verify_output}"; then
+    printf "%s\n" "${unit_verify_output}" >&2
+    exit 1
+fi
+
 test -f /usr/lib/sysusers.d/bazzite-mt7927-docker-vbox.conf
 test -x /usr/libexec/bazzite-configure-primary-user-groups
 test -f /usr/lib/modules-load.d/virtualbox-host.conf
