@@ -18,6 +18,7 @@ env:
   IMAGE_REGISTRY: ghcr.io/x-vlad-x
   BASE_IMAGE: ghcr.io/ublue-os/bazzite-nvidia-open:stable
   DEFAULT_TAG: stable
+  CONTAINER_RUNTIME: runc
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -45,13 +46,22 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          for package in podman skopeo; do
+          for package in podman skopeo "${CONTAINER_RUNTIME}"; do
             command -v "${package}" >/dev/null || missing+=("${package}")
           done
           if (( ${#missing[@]} )); then
             sudo apt-get update
             sudo apt-get install -y "${missing[@]}"
           fi
+
+      - name: Report container tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          podman --version
+          skopeo --version
+          "${CONTAINER_RUNTIME}" --version
+          podman info --format 'Podman default OCI runtime: {{.Host.OCIRuntime.Name}}'
 
       - name: Install Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3
@@ -74,6 +84,7 @@ jobs:
         run: |
           set -euo pipefail
           podman build \
+            --runtime "${CONTAINER_RUNTIME}" \
             --build-arg "BASE_IMAGE=${{ steps.base.outputs.pinned }}" \
             --label "containers.bootc=1" \
             --label "org.opencontainers.image.description=Bazzite KDE with NVIDIA open modules, MT7927, Docker Engine, and prebuilt VirtualBox host modules" \
