@@ -137,11 +137,29 @@ jobs:
         run: |
           set -euo pipefail
           image="${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+
+          # Signing depends on external services (the Actions OIDC token
+          # endpoint, Fulcio, Rekor, GHCR) that occasionally return transient
+          # errors, so retry with backoff instead of failing the whole build.
+          retry() {
+            local attempt=1 max_attempts=5 delay=15
+            until "$@"; do
+              if (( attempt >= max_attempts )); then
+                echo "Command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed: $*; retrying in ${delay}s..." >&2
+              sleep "${delay}"
+              attempt=$(( attempt + 1 ))
+              delay=$(( delay * 2 ))
+            done
+          }
+
           if [[ -n "${COSIGN_PRIVATE_KEY}" ]]; then
-            cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${image}"
+            retry cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${image}"
           else
-            cosign sign --yes "${image}"
-            cosign verify \
+            retry cosign sign --yes "${image}"
+            retry cosign verify \
               --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/build.yml@refs/heads/main" \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
               "${image}"
