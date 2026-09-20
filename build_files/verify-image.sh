@@ -67,6 +67,24 @@ test -f "${mt7927_module}"
 [[ "${mt7927_vermagic}" == "${KERNEL_VERSION} "* ]]
 grep -qi "7927" <<<"${mt7927_aliases}"
 
+mt6639_bt_firmware="$(modinfo -k "${KERNEL_VERSION}" -F firmware btmtk | grep "BT_RAM_CODE_MT6639" || true)"
+if [[ -z "${mt6639_bt_firmware}" ]]; then
+    echo "btmtk declares no MT6639 Bluetooth firmware: MT7927 Bluetooth would not work" >&2
+    exit 1
+fi
+
+bt_firmware_found=0
+for candidate in "/usr/lib/firmware/${mt6639_bt_firmware}"{,.xz,.zst,.gz}; do
+    if [[ -e "${candidate}" ]]; then
+        bt_firmware_found=1
+        break
+    fi
+done
+if [[ "${bt_firmware_found}" -ne 1 ]]; then
+    echo "MT6639 Bluetooth firmware ${mt6639_bt_firmware} is missing from the image" >&2
+    exit 1
+fi
+
 if rpm -qa | grep -Eqi "(oracle.*extension|virtualbox.*extpack)"; then
     echo "Oracle Extension Pack must not be embedded" >&2
     exit 1
